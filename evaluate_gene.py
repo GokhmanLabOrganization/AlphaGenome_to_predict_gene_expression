@@ -22,14 +22,13 @@ ARGUMENTS
 ---------
   --gene         Gene symbol, e.g. SAMD11  (required)
   --results_dir  Folder with lfc_df_*.tsv chunks  (default: results/all_genes)
-  --save_fig     Save figure to this path, e.g. results/SAMD11_eval.png
-                 A matching .txt report is also saved automatically.
+  --output_dir   Directory to write outputs  (default: single_gene_predictions/<GENE>/)
   --no_live      Fail instead of running a live prediction when gene is missing.
 
 OUTPUTS
 -------
   Text report printed to stdout.
-  If --save_fig is given: <name>.png (figure) + <name>.txt (report).
+  Figure (<GENE>_eval.png) and report (<GENE>_eval.txt) saved to --output_dir.
 """
 
 import argparse
@@ -296,8 +295,8 @@ def main():
         help="Folder containing lfc_df_*.tsv result chunks  (default: results/all_genes)",
     )
     parser.add_argument(
-        "--save_fig", default=None, metavar="PATH",
-        help="Save figure to this file (PNG/PDF). A .txt report is saved alongside it.",
+        "--output_dir", default=None, metavar="DIR",
+        help="Directory to write figure + report  (default: single_gene_predictions/<GENE>/)",
     )
     parser.add_argument(
         "--no_live", action="store_true",
@@ -354,22 +353,16 @@ def main():
     print("[4/4] Generating figure ...")
     fig = make_figure(gene_row, all_df, hybrids)
 
-    if args.save_fig:
-        save_path = Path(args.save_fig)
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(save_path, dpi=150, bbox_inches="tight")
-        txt_path = save_path.with_suffix(".txt")
-        txt_path.write_text(report)
-        print(f"      Figure saved : {save_path}")
-        print(f"      Report saved : {txt_path}")
-    else:
-        default = Path(f"results/{gene_name}_eval.png")
-        default.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(default, dpi=150, bbox_inches="tight")
-        txt_path = default.with_suffix(".txt")
-        txt_path.write_text(report)
-        print(f"      Figure saved : {default}")
-        print(f"      Report saved : {txt_path}")
+    out_dir = Path(args.output_dir) if args.output_dir else Path(f"single_gene_predictions/{gene_name}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    fig_path = out_dir / f"{gene_name}_eval.png"
+    txt_path = out_dir / f"{gene_name}_eval.txt"
+    fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+    txt_path.write_text(report)
+    print(f"      Output dir   : {out_dir}")
+    print(f"      Figure saved : {fig_path}")
+    print(f"      Report saved : {txt_path}")
 
     plt.close(fig)
     print("Done.")
