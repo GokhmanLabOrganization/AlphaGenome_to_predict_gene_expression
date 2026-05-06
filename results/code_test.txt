@@ -1,0 +1,61 @@
+==================================================
+ AlphaGenome prediction pipeline — test suite
+==================================================
+
+--- 1. Import checks ---
+PASS  import re
+PASS  import argparse
+PASS  import os
+PASS  import numpy
+PASS  import polars
+PASS  import matplotlib
+PASS  import pandas
+PASS  import Bio
+PASS  import alphagenome
+
+--- 2. config.py constants ---
+ALL_ATTRS_OK
+PASS  config.py — all required constants present
+
+--- 3. File / directory existence ---
+PASS  genomes/ directory exists
+PASS  chimp FASTA exists
+PASS  hg38 FASTA exists
+PASS  chimp GFF exists
+PASS  chimp genes TSV exists
+PASS  chimp exons TSV exists
+PASS  human genes TSV exists
+PASS  human exons TSV exists
+
+--- 4. Pure-function unit tests ---
+PASS  union_intervals empty
+PASS  union_intervals single
+PASS  union_intervals two non-overlapping
+PASS  union_intervals two overlapping
+PASS  union_intervals touching (no merge)
+PASS  union_intervals nested
+PASS  union_intervals already sorted
+PASS  union_intervals unsorted input
+PASS  get_gene_1mb_region missing gene returns Nones
+PASS  get_gene_1mb_region symbol
+PASS  get_gene_1mb_region chrom
+PASS  get_gene_1mb_region strand
+PASS  get_gene_1mb_region start_1mb
+PASS  get_gene_1mb_region end_1mb
+PASS  get_gene_1mb_region window_size
+PASS  coding_region_mean_expression + strand returns 1.0
+PASS  coding_region_mean_expression - strand returns 2.0
+PASS  coding_region_mean_expression no matching exons returns None
+
+--- 5. CLI argument parsing ---
+PASS  ag_predictions.py imports (with stubs)
+PASS  argparse: --job_i / --chunk_size parsed correctly
+
+--- 6. Output directory creation ---
+PASS  results/ dir writable
+
+==================================================
+  Passed : 39 / 39
+  Failed : 0
+  Warnings (optional deps / files): 0
+==================================================
