@@ -13,10 +13,12 @@ echo "Submitting job ${job_i}/${NUM_JOBS}"
 # Submit jobs
 for ((job_i=0; job_i<NUM_JOBS; job_i++)); do
 
-    OUTPUT_FILE="$OUTPUT_DIR/lfc_df_job${job_i}.tsv"
+    START_I=$(( job_i * GENES_PER_JOB ))
+    END_I=$(( START_I + GENES_PER_JOB ))
+    OUTPUT_FILE="$OUTPUT_DIR/lfc_df_${START_I}_${END_I}.tsv"
 
     if [ -f "$OUTPUT_FILE" ]; then
-        echo "Skipping job ${job_i} (output exists)"
+        echo "Skipping job ${job_i} (output exists: $OUTPUT_FILE)"
         continue
     fi
 
@@ -29,7 +31,7 @@ for ((job_i=0; job_i<NUM_JOBS; job_i++)); do
         -R "rusage[mem=16000] span[ptile=4] select[gpu]" \
         -o /home/labs/davidgo/itamarn/log/AG_gene_pred_log/gene_job_${job_i}.%J.o \
         -e /home/labs/davidgo/itamarn/log/AG_gene_pred_log/gene_job_${job_i}.%J.e \
-        python "/home/labs/davidgo/itamarn/backup/MSc/XGBoost_mpra_to_gene_expression/ag_predictions.py" \
+        python "/home/labs/davidgo/itamarn/backup/MSc/AlphaGenome_to_predict_gene_expression/ag_predictions.py" \
         --job_i "$job_i" \
         --chunk_size "$GENES_PER_JOB" \
         --output_dir "$OUTPUT_DIR" \
