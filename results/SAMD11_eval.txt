@@ -1,0 +1,46 @@
+============================================================
+  Evaluation: SAMD11
+============================================================
+
+PREDICTION  (AlphaGenome — chondrocyte cell type)
+  Predicted LFC  (log2 human/chimp) : +5.6056  [human-biased]
+  Human expression                  : 0.302199
+  Chimp expression                  : 0.006206
+  Human / Chimp ratio               : 48.69x
+
+GENOME-WIDE CONTEXT
+  Total genes with predictions      : 5
+  LFC percentile                    : 40.0th
+  Z-score                           : -0.06
+  Rank among human-upregulated      : #3
+  All-gene LFC mean ± SD            : +5.941 ± 6.089
+
+HYBRID ASE DATA  (multi-cell-type)
+  Experimental LFC  (ExpLBM)        : +0.1996
+  Adjusted p-value                  : 2.68e-01
+  Human TPM  (hybrid)               : 1.0713
+  Chimp TPM  (hybrid)               : 0.9494
+  ASE classification  (ExpLBM)      : else
+  N cell types with ASE signal      : 12
+
+  PREDICTION vs EXPERIMENT
+    Direction match               : YES ✓
+    Predicted LFC                 : +5.6056
+    Experimental LFC              : +0.1996
+    Difference (pred - exp)       : +5.4060
+
+  TOP HUMAN-BIASED CELL TYPES:
+    Outer_root_sheath_cells                             : +0.528
+    KRT85+_follicular_progenitors                       : +0.493
+    Melanocytes                                         : +0.394
+    KRT6B+_activated_keratinocytes                      : +0.083
+    Cycling_keratinocyte_progenitors                    : +0.079
+
+  TOP CHIMP-BIASED CELL TYPES:
+    Retinal_pigment_epithelium_(RPE)                    : -1.766
+    Cardiomyocyte_(CM)                                  : -0.854
+    iPSCs                                               : -0.847
+    Skeletal_myocyte_(SKM)                              : -0.837
+    Hepatocyte_Progenitor_(HP)                          : -0.833
+
+============================================================

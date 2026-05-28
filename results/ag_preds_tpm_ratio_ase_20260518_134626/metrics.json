@@ -1,0 +1,40 @@
+{
+  "LinearRegression_human": {
+    "pearson_r": 0.6406758297291598,
+    "pearson_pval": 3.958661447298495e-111,
+    "r2": 0.40682077407836914,
+    "rmse": 0.37078354569153243
+  },
+  "LinearRegression_chimp": {
+    "pearson_r": 0.6445088395616376,
+    "pearson_pval": 7.311039708514497e-113,
+    "r2": 0.41293859481811523,
+    "rmse": 0.37125200611433035
+  },
+  "XGBoost_human": {
+    "pearson_r": 0.9163685294417008,
+    "pearson_pval": 0.0,
+    "r2": 0.8389239311218262,
+    "rmse": 0.19321598169082574
+  },
+  "XGBoost_chimp": {
+    "pearson_r": 0.9199034832813872,
+    "pearson_pval": 0.0,
+    "r2": 0.8446924090385437,
+    "rmse": 0.19095163463151074
+  },
+  "XGBoost_ratio": {
+    "pearson_r": 0.06215598194207334,
+    "pearson_pval": 0.05522194718401946,
+    "r2": 0.0038633660911833474
+  },
+  "_config": {
+    "ag_preds_glob": "/home/labs/davidgo/itamarn/backup/MSc/AlphaGenome_to_predict_gene_expression/results/all_genes/*.tsv",
+    "ase_only": true,
+    "target": "log10(TPM + 1)",
+    "n_train": 3807,
+    "n_test": 952,
+    "n_ag_features": 3,
+    "n_mpra_features": 28
+  }
+}

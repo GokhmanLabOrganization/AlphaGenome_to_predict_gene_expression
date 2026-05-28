@@ -1,0 +1,64 @@
+{
+  "LinearRegression": {
+    "position_level": {
+      "pearson_r": 0.28058215975761414,
+      "pearson_pval": 6.637827701400821e-06,
+      "r2": -31.213459014892578,
+      "rmse": 0.9506890169918664
+    },
+    "gene_level": {
+      "pearson_r": 0.28100278973579407,
+      "pearson_pval": 0.6469821674760169,
+      "r2": -31.15607452392578,
+      "rmse": 0.9498418952483266
+    }
+  },
+  "XGBoost": {
+    "position_level": {
+      "pearson_r": 0.2748400568962097,
+      "pearson_pval": 1.0383561204652648e-05,
+      "r2": -6.866820335388184,
+      "rmse": 0.46980692598325496
+    },
+    "gene_level": {
+      "pearson_r": 0.3686809241771698,
+      "pearson_pval": 0.5414432831643281,
+      "r2": -6.74513053894043,
+      "rmse": 0.46615911354739736
+    }
+  },
+  "FCNet": {
+    "position_level": {
+      "pearson_r": 0.38850706815719604,
+      "pearson_pval": 1.9683296285059114e-10,
+      "r2": -29.15658950805664,
+      "rmse": 0.9198370568440335
+    },
+    "gene_level": {
+      "pearson_r": 0.3898742198944092,
+      "pearson_pval": 0.5164759894639476,
+      "r2": -29.02857208251953,
+      "rmse": 0.9178826149644481
+    }
+  },
+  "_config": {
+    "human_emb_dir": "/home/labs/davidgo/itamarn/backup/MSc/AlphaGenome_to_predict_gene_expression/../create_AG_embeddings/embeddings/human",
+    "chimp_emb_dir": "/home/labs/davidgo/itamarn/backup/MSc/AlphaGenome_to_predict_gene_expression/../create_AG_embeddings/embeddings/chimp",
+    "ag_preds_glob": "results/all_genes/*.tsv",
+    "lfc_threshold": 0.0,
+    "ase_only": false,
+    "target": "lfc",
+    "target_label": "LFC (raw)",
+    "include_diff": false,
+    "emb_dim": 1536,
+    "feature_dim": 3072,
+    "n_genes_total": 23,
+    "n_train_positions": 900,
+    "n_test_positions": 250,
+    "n_train_genes": 18,
+    "n_test_genes": 5,
+    "hidden_dim": 256,
+    "epochs": 5,
+    "max_positions_per_gene": 50
+  }
+}

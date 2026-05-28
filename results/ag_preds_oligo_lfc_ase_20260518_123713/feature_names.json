@@ -1,0 +1,20 @@
+[
+  "HumanGeneExpression",
+  "ChimpGeneExpression",
+  "ag_signed_log10_lfc",
+  "logFC_derived_vs_ancestral",
+  "normalized_activity_estimate_ancestral",
+  "normalized_activity_estimate_derived",
+  "Distance_to_gene(TSS)",
+  "differential_activity_fdr",
+  "within_promoter",
+  "num_sources_linking_gene",
+  "barcode_count_ancestral",
+  "barcode_count_derived",
+  "DNA_counts_raw_ancestral",
+  "variants_count",
+  "log_activity_derived",
+  "logFC_sign",
+  "distance_to_TSS_abs",
+  "sig_diff_activity"
+]

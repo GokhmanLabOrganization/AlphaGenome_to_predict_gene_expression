@@ -15,12 +15,18 @@ The goal is to identify genes with large predicted expression differences betwee
 ```
 .
 ├── ag_predictions.py               # Core pipeline: all functions + CLI entry-point
-├── config.template.py              # Template — copy to config.py and fill in your API key
+├── evaluate_gene.py                # Single-gene evaluation CLI
 ├── submit_alphagenome_pred_over_genes_jobs.sh   # LSF batch-submission script (WEXAC cluster)
-├── evaluate_AG_gene_preds.ipynb    # Notebook for exploring and plotting results
+├── claude_report.ipynb             # Comprehensive evaluation notebook
+├── evaluate_AG_gene_preds.ipynb    # Exploratory analysis notebook
 ├── test.sh                         # Bash test suite (39 tests)
+├── config/
+│   ├── __init__.py                 # Re-exports all constants so `import config` works
+│   ├── config.template.py          # Template — copy to config.py and fill in AG_API_KEY
+│   └── config.py                   # Your local config (gitignored — never committed)
 └── results/
     ├── code_test.txt               # Saved output of the last test run
+    ├── all_genes/                  # Output of the full cluster run (lfc_df_*.tsv)
     └── test/
         └── lfc_df_0_5.tsv          # Pilot run — first 5 gene pairs
 ```
@@ -45,18 +51,18 @@ pip install numpy polars pandas biopython matplotlib alphagenome
 ### 3. Configure
 
 ```bash
-cp config.template.py config.py
+cp config/config.template.py config/config.py
 ```
 
-Open `config.py` and set your AlphaGenome API key:
+Open `config/config.py` and set your AlphaGenome API key:
 
 ```python
 AG_API_KEY = 'YOUR_ALPHAGENOME_API_KEY'
 ```
 
-All other paths in `config.py` point to shared data on the WEXAC cluster (`/home/labs/davidgo/...`). Update them if running elsewhere.
+All other paths in `config/config.py` point to shared data on the WEXAC cluster (`/home/labs/davidgo/...`). Update them if running elsewhere.
 
-> `config.py` is listed in `.gitignore` and will never be committed — keep your API key out of version control.
+> `config/config.py` is listed in `.gitignore` and will never be committed — keep your API key out of version control.
 
 ### 4. Genome FASTA files
 

@@ -1,6 +1,6 @@
 """
-Regression models predicting continuous LFC from AlphaGenome scalar gene predictions
-+ MPRA gene-level features.
+Regression models predicting allele-specific TPM from AlphaGenome scalar gene
+predictions + MPRA gene-level features.
 
 Features:
   - HumanGeneExpression  (raw AG predicted human expression)
@@ -13,13 +13,15 @@ Models:
   - XGBoostRegressor  (gradient-boosted trees)
   - FCNet             (3-layer fully-connected neural network, PyTorch)
 
-Target: ExpLBM_LFC_human_ref (experimental LFC, human-chimp hybrids)
+Target: ExpLBM_TPM_human_allele  or  ExpLBM_TPM_chimp_allele
+        (allele-specific expression from human-chimp hybrids)
 
 Outputs saved to --output-dir:
   - metrics.json
   - scatter_LinearRegression.png
   - scatter_XGBoost.png
   - scatter_FCNet.png
+  - scatter_log10_tpm_diagnostic.png
   - feature_importance_xgboost.png
   - feature_names.json
   - scaler.pkl
@@ -60,7 +62,7 @@ import dataMaker as dm
 # Helpers
 # ---------------------------------------------------------------------------
 
-def scatter_plot(y_true, y_pred, model_name, output_dir):
+def scatter_plot(y_true, y_pred, model_name, output_dir, ylabel="Predicted TPM"):
     r, _ = pearsonr(y_true, y_pred)
     density = gaussian_kde(np.vstack([y_true, y_pred]))(np.vstack([y_true, y_pred]))
     fig, ax = plt.subplots(figsize=(5.8, 5))
@@ -69,20 +71,18 @@ def scatter_plot(y_true, y_pred, model_name, output_dir):
     lo = min(y_true.min(), y_pred.min())
     hi = max(y_true.max(), y_pred.max())
     ax.plot([lo, hi], [lo, hi], "r--", linewidth=1.5)
-    ax.set_xscale("symlog", base=2, linthresh=0.1)
-    ax.set_yscale("symlog", base=2, linthresh=0.1)
-    ax.set_xlabel("True LFC")
-    ax.set_ylabel("Predicted LFC")
+    ax.set_xlabel("True TPM")
+    ax.set_ylabel(ylabel)
     ax.set_title(f"{model_name}  (Pearson r={r:.3f})")
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, f"scatter_{model_name.replace(' ', '_')}.png"), dpi=150)
     plt.close()
 
 
-def scatter_log10_lfc(pred_lfc, exp_lfc, output_path):
-    """Section-5.2-style plot: log10 scale, mean-centred, identity line."""
-    x = np.log10(np.asarray(exp_lfc,  dtype=float))
-    y = np.log10(np.asarray(pred_lfc, dtype=float))
+def scatter_log10_tpm_diagnostic(ag_pred_expr, exp_tpm, species, output_path):
+    """Sections-7.1/7.2-style: log10 scale, mean-centred, identity line."""
+    x = np.log10(np.asarray(exp_tpm,      dtype=float))
+    y = np.log10(np.asarray(ag_pred_expr,  dtype=float))
     mask = np.isfinite(x) & np.isfinite(y)
     x, y = x[mask], y[mask]
     x -= np.mean(x)
@@ -103,12 +103,11 @@ def scatter_log10_lfc(pred_lfc, exp_lfc, output_path):
     ax.plot(lims, lims, "r--", linewidth=2, label="x = y")
     ax.set_xlim(lims)
     ax.set_ylim(lims)
-
     ax.axhline(0, linestyle="--", linewidth=1, color="grey")
     ax.axvline(0, linestyle="--", linewidth=1, color="grey")
-    ax.set_xlabel("log₁₀(Experimental LFC)  [mean-centred]")
-    ax.set_ylabel("log₁₀(Predicted LFC)  [mean-centred]")
-    ax.set_title("AG Predicted vs Experimental LFC  (log₁₀, mean-centred)")
+    ax.set_xlabel(f"Experimental {species} TPM  log₁₀ [mean-centred]")
+    ax.set_ylabel(f"AG predicted {species} expression  log₁₀ [mean-centred]")
+    ax.set_title(f"AG Predicted vs Experimental TPM — {species}  (log₁₀, mean-centred)")
     ax.text(
         0.05, 0.95,
         f"N = {len(x)}\nr = {r:.3f}\nR² = {r2:.3f}\np = {p:.2e}",
@@ -203,7 +202,7 @@ def train_fcnet(X_train, y_train, X_val, y_val,
 
 
 # ---------------------------------------------------------------------------
-# MPRA gene features  (copied from predict_lfc_regression_with_mpra.py)
+# MPRA gene features
 # ---------------------------------------------------------------------------
 
 def build_mpra_gene_features(
@@ -234,14 +233,14 @@ def build_mpra_gene_features(
         .rename({"Gene_symbol": "Gene"})
     )
 
-    tissue_ase = human_chimp_hybrids.select([
+    tissue_cols = human_chimp_hybrids.select([
         "Gene",
         f"{tissue}_gene_ase_type",
         f"{tissue}_LFC_human_ref",
         f"{tissue}_LFC_padj_human_ref",
         f"{tissue}_TPM_total",
     ])
-    final_data = tissue_ase.join(joined, on="Gene", how="inner")
+    final_data = tissue_cols.join(joined, on="Gene", how="inner")
 
     data_sign = (
         final_data
@@ -268,7 +267,7 @@ def build_mpra_gene_features(
 
     final_with_counts = final_data.join(oligo_counts, on="Gene", how="inner")
 
-    # No ASE-type filter here — keep all genes with sufficient oligos
+    # No ASE-type filter — keep all genes with sufficient oligos
     gene_data = (
         final_with_counts
         .with_columns((pl.col(f"{tissue}_LFC_human_ref") > 0).alias("gene_logFC_positive_sign"))
@@ -331,7 +330,7 @@ def build_mpra_gene_features(
     ]
     gene_level_cols = [c for c in gene_level_cols if c in gene_data.columns]
 
-    oligo_agg  = gene_data.group_by("Gene").agg(agg_exprs)
+    oligo_agg   = gene_data.group_by("Gene").agg(agg_exprs)
     gene_static = gene_data.select(gene_level_cols).unique(subset=["Gene"])
     return oligo_agg.join(gene_static, on="Gene", how="inner")
 
@@ -340,10 +339,12 @@ def build_mpra_gene_features(
 # Main
 # ---------------------------------------------------------------------------
 
-def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
-         use_gpu: bool, ase_only: bool, target: str = "lfc",
-         hidden_dim: int = 256, epochs: int = 300):
+def main(ag_preds_glob: str, output_dir: str, species: str, target: str,
+         use_gpu: bool, ase_only: bool, hidden_dim: int = 256, epochs: int = 300):
     os.makedirs(output_dir, exist_ok=True)
+
+    tpm_col = f"ExpLBM_TPM_{species}_allele"
+    ag_expr_col = "HumanGeneExpression" if species == "human" else "ChimpGeneExpression"
 
     # ------------------------------------------------------------------
     # Load AG predictions
@@ -363,7 +364,7 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
     # ------------------------------------------------------------------
     hybrids = pl.read_csv(
         config.HUMAN_CHIMP_HYBRIDS_DATA_PATH_WEXAC, separator="\t"
-    ).select(["Gene", "ExpLBM_LFC_human_ref", "ExpLBM_gene_ase_type"])
+    ).select(["Gene", tpm_col, "ExpLBM_gene_ase_type"])
 
     joined = ag.join(hybrids, on="Gene", how="inner")
     print(f"  {joined.height} genes after join with hybrid labels")
@@ -372,18 +373,15 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
         joined = joined.filter(pl.col("ExpLBM_gene_ase_type") == "ASE")
         print(f"  {joined.height} genes after --ase-only filter")
 
-    if lfc_threshold > 0:
-        joined = joined.filter(pl.col("ExpLBM_LFC_human_ref").abs() >= lfc_threshold)
-        print(f"  {joined.height} genes after |LFC| >= {lfc_threshold} filter")
-
     # ------------------------------------------------------------------
-    # Section-5.2-style plot: log10 LFC, mean-centred, identity line
+    # Diagnostic scatter: AG predicted expression vs experimental TPM
     # ------------------------------------------------------------------
-    print("Generating log10 LFC scatter (Section 5.2 style)...")
-    scatter_log10_lfc(
-        pred_lfc=joined["LFC"].to_numpy(),
-        exp_lfc=joined["ExpLBM_LFC_human_ref"].to_numpy(),
-        output_path=os.path.join(output_dir, "scatter_log10_lfc_mean_centred.png"),
+    print("Generating diagnostic TPM scatter...")
+    scatter_log10_tpm_diagnostic(
+        ag_pred_expr=joined[ag_expr_col].to_numpy(),
+        exp_tpm=joined[tpm_col].to_numpy(),
+        species=species,
+        output_path=os.path.join(output_dir, "scatter_log10_tpm_diagnostic.png"),
     )
 
     # ------------------------------------------------------------------
@@ -421,10 +419,10 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
         if not np.isfinite(ag_feats).all():
             continue
         try:
-            y_val = float(row["ExpLBM_LFC_human_ref"])
+            y_val = float(row[tpm_col])
         except (TypeError, ValueError):
             continue
-        if not np.isfinite(y_val):
+        if not np.isfinite(y_val) or y_val < 0:
             continue
         rows_ag.append(ag_feats)
         rows_mpra.append(mpra_lookup[gene])
@@ -442,15 +440,15 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
     X      = np.hstack([ag_X, mpra_X])
     y      = np.array(y_list, dtype=np.float32)
 
-    if target == "log10_lfc":
-        y = (np.sign(y) * np.log10(np.abs(y) + 1)).astype(np.float32)
-        target_label = "sign(LFC)×log10(|LFC|+1)"
+    if target == "log10_tpm":
+        y = np.log10(y + 1).astype(np.float32)
+        target_label = "log10(TPM + 1)"
     else:
-        target_label = "LFC (raw)"
+        target_label = "TPM (raw)"
 
     print(f"\n  Final dataset: {X.shape[0]} samples × {X.shape[1]} features")
     print(f"  ({len(ag_feat_cols)} AG + {len(mpra_feat_cols)} MPRA)")
-    print(f"  Target: {target_label}")
+    print(f"  Target: {target_label}  [{species} allele]")
     print(f"  y range: [{y.min():.3f}, {y.max():.3f}]  mean={y.mean():.3f}")
 
     with open(os.path.join(output_dir, "feature_names.json"), "w") as f:
@@ -471,6 +469,7 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
         pickle.dump(scaler, f)
 
     all_metrics = {}
+    ylabel = f"Predicted {target_label} [{species}]"
     print(f"\n{'Model':<25}  {'Pearson r':>10}  {'R²':>8}  {'RMSE':>8}")
     print("-" * 57)
 
@@ -481,7 +480,7 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
     lr_model.fit(X_train, y_train)
     y_pred = lr_model.predict(X_test)
     all_metrics["LinearRegression"] = evaluate(y_test, y_pred, "LinearRegression")
-    scatter_plot(y_test, y_pred, "LinearRegression", output_dir)
+    scatter_plot(y_test, y_pred, "LinearRegression", output_dir, ylabel=ylabel)
 
     # ------------------------------------------------------------------
     # 2. XGBoost Regressor
@@ -502,7 +501,7 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
     xgb_reg.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=50)
     y_pred = xgb_reg.predict(X_test)
     all_metrics["XGBoost"] = evaluate(y_test, y_pred, "XGBoost")
-    scatter_plot(y_test, y_pred, "XGBoost", output_dir)
+    scatter_plot(y_test, y_pred, "XGBoost", output_dir, ylabel=ylabel)
     xgb_reg.save_model(os.path.join(output_dir, "xgboost_regressor.json"))
 
     importance = xgb_reg.get_booster().get_score(importance_type="gain")
@@ -537,7 +536,7 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
             torch.tensor(X_test, dtype=torch.float32, device=device)
         ).cpu().numpy()
     all_metrics["FCNet"] = evaluate(y_test, y_pred, "FCNet")
-    scatter_plot(y_test, y_pred, "FCNet", output_dir)
+    scatter_plot(y_test, y_pred, "FCNet", output_dir, ylabel=ylabel)
     torch.save(fcnet.state_dict(), os.path.join(output_dir, "fcnet_weights.pt"))
 
     # ------------------------------------------------------------------
@@ -545,10 +544,11 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
     # ------------------------------------------------------------------
     all_metrics["_config"] = {
         "ag_preds_glob": ag_preds_glob,
-        "lfc_threshold": lfc_threshold,
-        "ase_only": ase_only,
+        "species": species,
         "target": target,
         "target_label": target_label,
+        "tpm_col": tpm_col,
+        "ase_only": ase_only,
         "n_train": int(len(y_train)),
         "n_test": int(len(y_test)),
         "n_ag_features": len(ag_feat_cols),
@@ -570,7 +570,7 @@ def main(ag_preds_glob: str, output_dir: str, lfc_threshold: float,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="LFC regression from AlphaGenome scalar predictions + MPRA features"
+        description="TPM regression from AlphaGenome scalar predictions + MPRA features"
     )
     parser.add_argument(
         "--ag-preds-glob",
@@ -582,40 +582,47 @@ if __name__ == "__main__":
         "--output-dir",
         type=str,
         default=None,
-        help="Output directory (default: auto-generated with timestamp and target name)",
+        help="Output directory (default: auto-generated with timestamp)",
     )
-    parser.add_argument("--lfc-threshold", type=float, default=0.0,
-                        help="Minimum |ExpLBM_LFC_human_ref| to include a gene")
+    parser.add_argument(
+        "--species",
+        type=str,
+        choices=["human", "chimp"],
+        default="human",
+        help="Allele to predict: 'human' = ExpLBM_TPM_human_allele (default), 'chimp' = ExpLBM_TPM_chimp_allele",
+    )
+    parser.add_argument(
+        "--target",
+        type=str,
+        choices=["tpm", "log10_tpm"],
+        default="log10_tpm",
+        help="Target transform: 'tpm' = raw TPM, 'log10_tpm' = log10(TPM+1) (default)",
+    )
     parser.add_argument("--gpu", action="store_true")
-    parser.add_argument("--hidden-dim", type=int, default=256,
-                        help="FCNet hidden layer size (default: 256)")
-    parser.add_argument("--epochs", type=int, default=300,
-                        help="Max FCNet training epochs (default: 300)")
     parser.add_argument(
         "--ase-only",
         action="store_true",
         help="Restrict to genes classified as ASE in ExpLBM",
     )
-    parser.add_argument(
-        "--target",
-        type=str,
-        choices=["lfc", "log10_lfc"],
-        default="lfc",
-        help="Training target: 'lfc' = raw LFC, 'log10_lfc' = sign(LFC)×log10(|LFC|+1)",
-    )
+    parser.add_argument("--hidden-dim", type=int, default=256,
+                        help="FCNet hidden layer size (default: 256)")
+    parser.add_argument("--epochs", type=int, default=300,
+                        help="Max FCNet training epochs (default: 300)")
     args = parser.parse_args()
 
-    run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_ts  = datetime.now().strftime("%Y%m%d_%H%M%S")
     ase_tag = "_ase" if args.ase_only else ""
-    output_dir = args.output_dir or f"results/ag_preds_mpra_{args.target}{ase_tag}_{run_ts}"
+    output_dir = args.output_dir or (
+        f"results/ag_preds_tpm_{args.species}_{args.target}{ase_tag}_{run_ts}"
+    )
 
     main(
         ag_preds_glob=args.ag_preds_glob,
         output_dir=output_dir,
-        lfc_threshold=args.lfc_threshold,
+        species=args.species,
+        target=args.target,
         use_gpu=args.gpu,
         ase_only=args.ase_only,
-        target=args.target,
         hidden_dim=args.hidden_dim,
         epochs=args.epochs,
     )

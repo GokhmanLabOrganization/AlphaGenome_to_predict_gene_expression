@@ -1,0 +1,34 @@
+{
+  "LinearRegression": {
+    "pearson_r": 0.6141079082658454,
+    "pearson_pval": 1.7836347367460362e-176,
+    "r2": 0.37336456775665283,
+    "rmse": 0.40015851247699746
+  },
+  "XGBoost": {
+    "pearson_r": 0.8597549702659301,
+    "pearson_pval": 0.0,
+    "r2": 0.7383305430412292,
+    "rmse": 0.2585836783115972
+  },
+  "FCNet": {
+    "pearson_r": 0.8498072632765581,
+    "pearson_pval": 0.0,
+    "r2": 0.6931490898132324,
+    "rmse": 0.28001949223296396
+  },
+  "_config": {
+    "ag_preds_glob": "/home/labs/davidgo/itamarn/backup/MSc/AlphaGenome_to_predict_gene_expression/results/all_genes/*.tsv",
+    "species": "chimp",
+    "target": "log10_tpm",
+    "target_label": "log10(TPM + 1)",
+    "tpm_col": "ExpLBM_TPM_chimp_allele",
+    "ase_only": false,
+    "n_train": 6787,
+    "n_test": 1697,
+    "n_ag_features": 3,
+    "n_mpra_features": 28,
+    "hidden_dim": 256,
+    "epochs": 300
+  }
+}

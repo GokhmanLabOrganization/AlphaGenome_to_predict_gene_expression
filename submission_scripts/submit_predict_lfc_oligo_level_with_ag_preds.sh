@@ -1,19 +1,19 @@
 #!/bin/bash
-# Submit LFC regression job using AlphaGenome scalar predictions + MPRA features.
-# Models: LinearRegression (baseline) + XGBoost.
+# Submit oligo-level LFC regression job using AlphaGenome scalar predictions + per-oligo MPRA features.
+# Default: ASE genes only.
 #
 # Usage:
-#   bash submit_predict_lfc_regression_with_ag_preds.sh [lfc|log10_lfc]
+#   bash submit_predict_lfc_oligo_level_with_ag_preds.sh [lfc|log10_lfc]
 #
 # Examples:
-#   bash submit_predict_lfc_regression_with_ag_preds.sh              # raw LFC (default)
-#   bash submit_predict_lfc_regression_with_ag_preds.sh log10_lfc    # log10 target
-#   ASE_ONLY=1 bash submit_predict_lfc_regression_with_ag_preds.sh log10_lfc
+#   bash submit_predict_lfc_oligo_level_with_ag_preds.sh              # lfc, ASE only (defaults)
+#   bash submit_predict_lfc_oligo_level_with_ag_preds.sh log10_lfc    # log10 target
+#   NO_ASE_ONLY=1 bash submit_predict_lfc_oligo_level_with_ag_preds.sh lfc
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT_PATH="$SCRIPT_DIR/predict_lfc_regression_with_ag_preds.py"
+SCRIPT_PATH="$SCRIPT_DIR/predict_lfc_oligo_level_with_ag_preds.py"
 
 TARGET=${1:-lfc}
 if [[ "$TARGET" != "lfc" && "$TARGET" != "log10_lfc" ]]; then
@@ -22,11 +22,9 @@ if [[ "$TARGET" != "lfc" && "$TARGET" != "log10_lfc" ]]; then
 fi
 
 AG_PREDS_GLOB=${AG_PREDS_GLOB:-"$SCRIPT_DIR/results/all_genes/*.tsv"}
+NO_ASE_ONLY=${NO_ASE_ONLY:-0}
 LFC_THRESHOLD=${LFC_THRESHOLD:-0.0}
-ASE_ONLY=${ASE_ONLY:-0}
 USE_GPU=${USE_GPU:-0}
-HIDDEN_DIM=${HIDDEN_DIM:-256}
-EPOCHS=${EPOCHS:-300}
 LOG_DIR=${LOG_DIR:-/home/labs/davidgo/itamarn/log/ag_preds_mpra_regression_log}
 QUEUE=${QUEUE:-short}
 CONDA_ENV=${CONDA_ENV:-mpra_model_env}
@@ -34,17 +32,15 @@ CONDA_SH=${CONDA_SH:-$HOME/miniconda3/etc/profile.d/conda.sh}
 
 mkdir -p "$LOG_DIR"
 
-JOB_NAME="ag_mpra_${TARGET}"
+JOB_NAME="ag_mpra_oligo_${TARGET}"
 
-echo "Submitting AG predictions + MPRA LFC regression job"
+echo "Submitting AG predictions + MPRA oligo-level LFC regression job"
 echo "  Script      : $SCRIPT_PATH"
 echo "  Target      : $TARGET"
 echo "  AG preds    : $AG_PREDS_GLOB"
 echo "  LFC thresh  : $LFC_THRESHOLD"
-echo "  ASE only    : $ASE_ONLY"
+echo "  ASE only    : $([ "$NO_ASE_ONLY" = "1" ] && echo "no" || echo "yes")"
 echo "  Use GPU     : $USE_GPU"
-echo "  Hidden dim  : $HIDDEN_DIM"
-echo "  Epochs      : $EPOCHS"
 echo "  Queue       : $QUEUE"
 
 JOB_SCRIPT=$(mktemp "${LOG_DIR}/${JOB_NAME}.XXXXXX.sh")
@@ -57,10 +53,8 @@ python "$SCRIPT_PATH" \\
     --ag-preds-glob "$AG_PREDS_GLOB" \\
     --lfc-threshold "$LFC_THRESHOLD" \\
     --target "$TARGET" \\
-    --hidden-dim "$HIDDEN_DIM" \\
-    --epochs "$EPOCHS" \\
-    \$([ "$ASE_ONLY" = "1" ] && echo "--ase-only") \\
-    \$([ "$USE_GPU"  = "1" ] && echo "--gpu")
+    \$([ "$NO_ASE_ONLY" = "1" ] && echo "--no-ase-only") \\
+    \$([ "$USE_GPU"     = "1" ] && echo "--gpu")
 EOF
 
 if [ "$USE_GPU" = "1" ]; then
@@ -76,7 +70,7 @@ else
     bsub -J "$JOB_NAME" \
         -q "$QUEUE" \
         -n 4 \
-        -R "rusage[mem=16000] span[ptile=4]" \
+        -R "rusage[mem=32000] span[ptile=4]" \
         -o "${LOG_DIR}/${JOB_NAME}.%J.o" \
         -e "${LOG_DIR}/${JOB_NAME}.%J.e" \
         bash "$JOB_SCRIPT"

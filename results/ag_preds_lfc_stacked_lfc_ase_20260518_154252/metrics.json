@@ -1,0 +1,52 @@
+{
+  "XGBoost_TPM_human": {
+    "pearson_r": 0.9124034274333763,
+    "pearson_pval": 0.0,
+    "r2": 0.8321605324745178,
+    "rmse": 0.19393916816620957
+  },
+  "XGBoost_TPM_chimp": {
+    "pearson_r": 0.9193745430771098,
+    "pearson_pval": 0.0,
+    "r2": 0.8437957763671875,
+    "rmse": 0.18901848832470447
+  },
+  "LinearRegression_stack": {
+    "pearson_r": 0.020058804455686162,
+    "pearson_pval": 0.5366888628708406,
+    "r2": -0.01552724838256836,
+    "rmse": 0.8239150369089878
+  },
+  "Ridge_stack": {
+    "pearson_r": 0.02027911012460573,
+    "pearson_pval": 0.5322239201542475,
+    "r2": -0.01541149616241455,
+    "rmse": 0.8238680486650611
+  },
+  "XGBoost_stack": {
+    "pearson_r": -0.0298302808940913,
+    "pearson_pval": 0.3581429577321422,
+    "r2": -0.005813479423522949,
+    "rmse": 0.8199650709923884
+  },
+  "LinearRegression_ratio_only": {
+    "pearson_r": 0.04154466592624392,
+    "pearson_pval": 0.20053316984727917,
+    "r2": -0.0035895109176635742,
+    "rmse": 0.819058031275907
+  },
+  "_config": {
+    "ag_preds_glob": "/home/labs/davidgo/itamarn/backup/MSc/AlphaGenome_to_predict_gene_expression/results/all_genes/*.tsv",
+    "ase_only": true,
+    "active_oligos_only": true,
+    "elite_lineage_only": false,
+    "min_barcode_counts": 50,
+    "target": "lfc",
+    "target_label": "LFC (raw)",
+    "n_folds": 5,
+    "n_train": 3808,
+    "n_test": 951,
+    "n_tpm_features": 33,
+    "n_stack_features": 36
+  }
+}

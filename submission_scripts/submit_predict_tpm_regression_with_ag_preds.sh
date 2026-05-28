@@ -1,28 +1,34 @@
 #!/bin/bash
-# Submit LFC regression job using AlphaGenome scalar predictions + MPRA features.
-# Models: LinearRegression (baseline) + XGBoost.
+# Submit TPM regression job using AlphaGenome scalar predictions + MPRA features.
+# Models: LinearRegression (baseline) + XGBoost + FCNet.
 #
 # Usage:
-#   bash submit_predict_lfc_regression_with_ag_preds.sh [lfc|log10_lfc]
+#   bash submit_predict_tpm_regression_with_ag_preds.sh [human|chimp] [tpm|log10_tpm]
 #
 # Examples:
-#   bash submit_predict_lfc_regression_with_ag_preds.sh              # raw LFC (default)
-#   bash submit_predict_lfc_regression_with_ag_preds.sh log10_lfc    # log10 target
-#   ASE_ONLY=1 bash submit_predict_lfc_regression_with_ag_preds.sh log10_lfc
+#   bash submit_predict_tpm_regression_with_ag_preds.sh                      # human, log10_tpm (defaults)
+#   bash submit_predict_tpm_regression_with_ag_preds.sh chimp                # chimp, log10_tpm
+#   bash submit_predict_tpm_regression_with_ag_preds.sh human tpm            # human, raw TPM
+#   ASE_ONLY=1 bash submit_predict_tpm_regression_with_ag_preds.sh chimp log10_tpm
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT_PATH="$SCRIPT_DIR/predict_lfc_regression_with_ag_preds.py"
+SCRIPT_PATH="$SCRIPT_DIR/predict_tpm_regression_with_ag_preds.py"
 
-TARGET=${1:-lfc}
-if [[ "$TARGET" != "lfc" && "$TARGET" != "log10_lfc" ]]; then
-    echo "Error: target must be 'lfc' or 'log10_lfc', got '$TARGET'" >&2
+SPECIES=${1:-human}
+TARGET=${2:-log10_tpm}
+
+if [[ "$SPECIES" != "human" && "$SPECIES" != "chimp" ]]; then
+    echo "Error: species must be 'human' or 'chimp', got '$SPECIES'" >&2
+    exit 1
+fi
+if [[ "$TARGET" != "tpm" && "$TARGET" != "log10_tpm" ]]; then
+    echo "Error: target must be 'tpm' or 'log10_tpm', got '$TARGET'" >&2
     exit 1
 fi
 
 AG_PREDS_GLOB=${AG_PREDS_GLOB:-"$SCRIPT_DIR/results/all_genes/*.tsv"}
-LFC_THRESHOLD=${LFC_THRESHOLD:-0.0}
 ASE_ONLY=${ASE_ONLY:-0}
 USE_GPU=${USE_GPU:-0}
 HIDDEN_DIM=${HIDDEN_DIM:-256}
@@ -34,13 +40,13 @@ CONDA_SH=${CONDA_SH:-$HOME/miniconda3/etc/profile.d/conda.sh}
 
 mkdir -p "$LOG_DIR"
 
-JOB_NAME="ag_mpra_${TARGET}"
+JOB_NAME="ag_mpra_tpm_${SPECIES}_${TARGET}"
 
-echo "Submitting AG predictions + MPRA LFC regression job"
+echo "Submitting AG predictions + MPRA TPM regression job"
 echo "  Script      : $SCRIPT_PATH"
+echo "  Species     : $SPECIES"
 echo "  Target      : $TARGET"
 echo "  AG preds    : $AG_PREDS_GLOB"
-echo "  LFC thresh  : $LFC_THRESHOLD"
 echo "  ASE only    : $ASE_ONLY"
 echo "  Use GPU     : $USE_GPU"
 echo "  Hidden dim  : $HIDDEN_DIM"
@@ -55,7 +61,7 @@ export LD_LIBRARY_PATH="\$CONDA_PREFIX/lib:\${LD_LIBRARY_PATH:-}" &&
 cd "$SCRIPT_DIR" &&
 python "$SCRIPT_PATH" \\
     --ag-preds-glob "$AG_PREDS_GLOB" \\
-    --lfc-threshold "$LFC_THRESHOLD" \\
+    --species "$SPECIES" \\
     --target "$TARGET" \\
     --hidden-dim "$HIDDEN_DIM" \\
     --epochs "$EPOCHS" \\
@@ -67,8 +73,8 @@ if [ "$USE_GPU" = "1" ]; then
     bsub -J "$JOB_NAME" \
         -q "${QUEUE}-gpu" \
         -n 4 \
-        -gpu "num=1:mode=exclusive_process" \
-        -R "rusage[mem=32000] span[ptile=4] select[gpu]" \
+        -gpu "num=1:j_exclusive=yes:gmem=128GB" \
+        -R "rusage[mem=64000] span[ptile=4] select[gpu]" \
         -o "${LOG_DIR}/${JOB_NAME}.%J.o" \
         -e "${LOG_DIR}/${JOB_NAME}.%J.e" \
         bash "$JOB_SCRIPT"
@@ -76,7 +82,7 @@ else
     bsub -J "$JOB_NAME" \
         -q "$QUEUE" \
         -n 4 \
-        -R "rusage[mem=16000] span[ptile=4]" \
+        -R "rusage[mem=64000] span[ptile=4]" \
         -o "${LOG_DIR}/${JOB_NAME}.%J.o" \
         -e "${LOG_DIR}/${JOB_NAME}.%J.e" \
         bash "$JOB_SCRIPT"
