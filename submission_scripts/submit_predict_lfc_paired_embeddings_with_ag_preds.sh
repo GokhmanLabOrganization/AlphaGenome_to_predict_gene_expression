@@ -78,7 +78,7 @@ if [ "$USE_GPU" = "1" ]; then
         -q "${QUEUE}-gpu" \
         -n 4 \
         -gpu "num=1:mode=exclusive_process" \
-        -R "rusage[mem=64000] span[ptile=8] select[gpu]" \
+        -R "rusage[mem=256000] span[ptile=4] select[gpu]" \
         -o "${LOG_DIR}/${JOB_NAME}.%J.o" \
         -e "${LOG_DIR}/${JOB_NAME}.%J.e" \
         bash "$JOB_SCRIPT"
@@ -86,7 +86,7 @@ else
     bsub -J "$JOB_NAME" \
         -q "$QUEUE" \
         -n 4 \
-        -R "rusage[mem=64000] span[ptile=8]" \
+        -R "rusage[mem=256000] span[ptile=4]" \
         -o "${LOG_DIR}/${JOB_NAME}.%J.o" \
         -e "${LOG_DIR}/${JOB_NAME}.%J.e" \
         bash "$JOB_SCRIPT"
